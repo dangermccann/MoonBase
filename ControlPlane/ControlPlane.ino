@@ -205,9 +205,14 @@ void loop() {
     LEDs_0[2].stopBlinking();
   }
 
-  char buff[5];
-  itoa(analogRead(A0), buff, 10);
-  Serial.println(analogRead(buff));
+  char val[5];
+  itoa(analogRead(A0), val, 10);
+  Serial.print("Y:");
+  Serial.println(val);
+
+  itoa(analogRead(A1), val, 10);
+  Serial.print("X:");
+  Serial.println(val);
 
   if(b1.poll() != UNCHANGED) {
     LEDs_1[6].toggle();

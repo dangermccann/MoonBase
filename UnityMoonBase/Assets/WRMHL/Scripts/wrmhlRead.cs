@@ -40,15 +40,19 @@ public class wrmhlRead : MonoBehaviour {
 	public int QueueLenght = 1;
 
 	CrossPlatformInputManager.VirtualAxis m_HorizontalVirtualAxis;
+	CrossPlatformInputManager.VirtualAxis m_VerticalVirtualAxis;
 
 	void OnEnable()
 	{
-		m_HorizontalVirtualAxis = new CrossPlatformInputManager.VirtualAxis("Vertical", false);
+		m_HorizontalVirtualAxis = new CrossPlatformInputManager.VirtualAxis("Mouse X", false);
+		m_VerticalVirtualAxis = new CrossPlatformInputManager.VirtualAxis("Vertical", false);
 		CrossPlatformInputManager.RegisterVirtualAxis(m_HorizontalVirtualAxis);
+		CrossPlatformInputManager.RegisterVirtualAxis(m_VerticalVirtualAxis);
 	}
 
 	void OnDisable() {
 		m_HorizontalVirtualAxis.Remove();
+		m_VerticalVirtualAxis.Remove();
 	}
 
 	void Start () {
@@ -62,12 +66,34 @@ public class wrmhlRead : MonoBehaviour {
 		
 		//print ( ); // myDevice.read() return the data coming from the device using thread.
 		string str = myDevice.readQueue();
-		float val = float.Parse(str);
-		val = (val - 512f) / 512f;
+		
+		while(str != null) {
+		//Debug.Log(str);
 
-		Debug.Log(val);
+		
 
-		m_HorizontalVirtualAxis.Update(val);
+			string[] splits = str.Split(':');
+			if(splits.Length == 2) {
+				float val = float.Parse(splits[1]);
+				val = (val - 512f) / 512f;
+
+				if(splits[0] == "X") {
+					val *= -1;
+					m_HorizontalVirtualAxis.Update(val);
+				}
+				else if(splits[0] == "Y") {
+					m_VerticalVirtualAxis.Update(val);
+				}
+			}
+
+			str = myDevice.readQueue();
+
+		}
+		
+
+		//Debug.Log(val);
+
+		
 	}
 
 	void OnApplicationQuit() { // close the Thread and Serial Port
