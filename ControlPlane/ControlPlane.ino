@@ -2,171 +2,113 @@
 #include "Adafruit_MCP23017.h"
 #include <Adafruit_GFX.h>
 #include "Adafruit_LEDBackpack.h"
+#include "Button.h"
+#include "Led.h"
 
 /*
-    addr 0 = A2 low,  A1 low,  A0 low  000
-    addr 1 = A2 low,  A1 low,  A0 high 001
-    addr 2 = A2 low,  A1 high, A0 low  010
-    addr 3 = A2 low,  A1 high, A0 high 011
-    addr 4 = A2 high, A1 low,  A0 low  100
-    addr 5 = A2 high, A1 low,  A0 high 101
-    addr 6 = A2 high, A1 high, A0 low  110
-    addr 7 = A2 high, A1 high, A0 high 111
+ *  -- MCP23017 Address Selection --
+ *  addr 0 = A2 low,  A1 low,  A0 low  000
+ *  addr 1 = A2 low,  A1 low,  A0 high 001
+ *  addr 2 = A2 low,  A1 high, A0 low  010
+ *  addr 3 = A2 low,  A1 high, A0 high 011
+ *  addr 4 = A2 high, A1 low,  A0 low  100
+ *  addr 5 = A2 high, A1 low,  A0 high 101
+ *  addr 6 = A2 high, A1 high, A0 low  110
+ *  addr 7 = A2 high, A1 high, A0 high 111
  */
 
-// Connect pin #12 of the expander to Analog 5 (i2c clock)
-// Connect pin #13 of the expander to Analog 4 (i2c data)
-// Connect pins #15, 16 and 17 of the expander to ground (address selection)
-// Connect pin #9 of the expander to 5V (power)
-// Connect pin #10 of the expander to ground (common ground)
-// Connect pin #18 through a ~10kohm resistor to 5V (reset pin, active low)
+/*
+ *  -- MCP23017 Pin Assignment --
+ *  Connect pin #12 of the expander to Analog 5 (i2c clock)
+ *  Connect pin #13 of the expander to Analog 4 (i2c data)
+ *  Connect pins #15, 16 and 17 of the expander to ground (address selection)
+ *  Connect pin #9 of the expander to 5V (power)
+ *  Connect pin #10 of the expander to ground (common ground)
+ *  Connect pin #18 through a ~10kohm resistor to 5V (reset pin, active low)
+ *  Connect pins #19 and #20 of the expander to the interrupt pin (2 or 3)
+ */
 
-// Output #0 is on pin 21 so connect an LED or whatever from that to ground
+/*
+ * -- ATmega328P Pin Assignment -- 
+ * TODO
+ */
 
 Adafruit_MCP23017 mcp0;
 Adafruit_MCP23017 mcp1;
 Adafruit_AlphaNum4 alpha4 = Adafruit_AlphaNum4();
 
-#define LED_ON HIGH
-#define LED_OFF LOW
 
-struct Led {
-  int pin;
-  byte state;
-  byte nextState;
-  bool blink;
-  unsigned long updateTime;
-  unsigned long nextStateDelay;
+
+#define LEDs_0_Size 14
+Led LEDs_0[LEDs_0_Size] = {
+  Led(&mcp0, 1),
+  Led(&mcp0, 2),
+  Led(&mcp0, 3),
+  Led(&mcp0, 4),
+  Led(&mcp0, 5),
+  Led(&mcp0, 6),
+  Led(&mcp0, 7),
+  Led(&mcp0, 8),
+  Led(&mcp0, 9),
+  Led(&mcp0, 10),
+  Led(&mcp0, 11),
+  Led(&mcp0, 12),
+  Led(&mcp0, 13),
+  Led(&mcp0, 14),
 };
 
-Led LEDs_0[15] = {
-  { 1,  LED_ON,  LED_ON,  false },
-  { 2,  LED_OFF, LED_OFF, false },
-  { 3,  LED_OFF, LED_OFF, false },
-  { 4,  LED_OFF, LED_OFF, false },
-  { 5,  LED_OFF, LED_OFF, false },
-  { 6,  LED_OFF, LED_OFF, false },
-  { 7,  LED_OFF, LED_OFF, false },
-  { 8,  LED_OFF, LED_OFF, false },
-  { 9,  LED_OFF, LED_OFF, false },
-  { 10, LED_OFF, LED_OFF, false },
-  { 11, LED_OFF, LED_OFF, false },
-  { 12, LED_OFF, LED_OFF, false },
-  { 13, LED_OFF, LED_OFF, false },
-  { 14, LED_OFF, LED_OFF, false },
-  { 15, LED_OFF, LED_OFF, false },
+
+#define LEDs_1_Size 15
+Led LEDs_1[LEDs_1_Size] = {
+  Led(&mcp1, 1),
+  Led(&mcp1, 2),
+  Led(&mcp1, 3),
+  Led(&mcp1, 4),
+  Led(&mcp1, 5),
+  Led(&mcp1, 6),
+  Led(&mcp1, 7),
+  Led(&mcp1, 8),
+  Led(&mcp1, 9),
+  Led(&mcp1, 10),
+  Led(&mcp1, 11),
+  Led(&mcp1, 12),
+  Led(&mcp1, 13),
+  Led(&mcp1, 14),
+  Led(&mcp1, 15),
 };
-#define LEDs_0_Size sizeof(LEDs_0) / sizeof(Led)
 
-Led LEDs_1[15] = {
-  { 1,  LED_ON,  LED_ON,  false },
-  { 2,  LED_OFF, LED_OFF, false },
-  { 3,  LED_OFF, LED_OFF, false },
-  { 4,  LED_OFF, LED_OFF, false },
-  { 5,  LED_OFF, LED_OFF, false },
-  { 6,  LED_OFF, LED_OFF, false },
-  { 7,  LED_OFF, LED_OFF, false },
-  { 8,  LED_OFF, LED_OFF, false },
-  { 9,  LED_OFF, LED_OFF, false },
-  { 10, LED_OFF, LED_OFF, false },
-  { 11, LED_OFF, LED_OFF, false },
-  { 12, LED_OFF, LED_OFF, false },
-  { 13, LED_OFF, LED_OFF, false },
-  { 14, LED_OFF, LED_OFF, false },
-  { 15, LED_OFF, LED_OFF, false },
-};
-#define LEDs_1_Size sizeof(LEDs_1) / sizeof(Led)
+Button b0 = Button(&mcp0, 15);
+Button b1 = Button(&mcp1, 0);
 
 
-void initLEDs(Led leds[], int count, Adafruit_MCP23017& _mcp) {
-  unsigned long current = millis();
-  
+void setupLEDs(Led leds[], int count) {
   for (int i = 0; i < count; i++) {
     Led led = leds[i];
-    _mcp.pinMode(led.pin , OUTPUT);
-    _mcp.digitalWrite(led.pin, led.state);
-    led.updateTime = current;
+    led.setup();
   }
 }
 
-void ledOn(Led& led, Adafruit_MCP23017& _mcp) {
-  ledSet(led, _mcp, LED_ON);
-}
-
-void ledsOn(Led leds[], int count, Adafruit_MCP23017& _mcp) {
+void ledsOn(Led leds[], int count) {
   for (int i = 0; i < count; i++) {
-    ledOn(leds[i], _mcp);
+    leds[i].on();
   }
 }
 
-void ledOnFor(Led& led, Adafruit_MCP23017& _mcp, unsigned long duration) {
-  ledOn(led, _mcp);
-  led.nextStateDelay = duration;
-  led.nextState = LED_OFF;
-}
-
-
-void ledOff(Led& led, Adafruit_MCP23017& _mcp) {
-  ledSet(led, _mcp, LED_OFF);
-}
-
-void ledsOff(Led leds[], int count, Adafruit_MCP23017& _mcp) {
+void ledsOff(Led leds[], int count) {
   for (int i = 0; i < count; i++) {
-    ledOff(leds[i], _mcp);
+    leds[i].off();
   }
-}
-
-
-void ledOffFor(Led& led, Adafruit_MCP23017& _mcp, unsigned long duration) {
-  ledOff(led, _mcp);
-  led.nextStateDelay = duration;
-  led.nextState = LED_ON;
-}
-
-void ledSet(Led& led, Adafruit_MCP23017& _mcp, byte state) {
-  led.state = state;
-  led.nextState = state;
-  led.updateTime = millis();
-  led.nextStateDelay = 0;
-  led.blink = false;
-  _mcp.digitalWrite(led.pin, led.state);
-}
-
-void ledBlink(Led& led, Adafruit_MCP23017& _mcp, unsigned long duration) {
-  ledOn(led, _mcp);
-  led.nextState = LED_OFF;
-  led.nextStateDelay = duration;
-  led.blink = true;
 }
 
 void ledsBlink(Led leds[], int count, Adafruit_MCP23017& _mcp, unsigned long duration) {
   for (int i = 0; i < count; i++) {
-    ledBlink(leds[i], _mcp, duration);
-  }
-}
-
-void ledUpdate(Led& led, Adafruit_MCP23017& _mcp) {
-
-  if(led.state != led.nextState) {
-    unsigned long current = millis();
-    if(current - led.updateTime > led.nextStateDelay) {
-      if(led.blink) {
-        byte next = led.state;
-        led.state = led.nextState;
-        led.nextState = next;
-        led.updateTime = millis();
-        _mcp.digitalWrite(led.pin, led.state);
-      }
-      else {
-        ledSet(led, _mcp, led.nextState);
-      }
-    }
+    leds[i].startBlinking(duration);
   }
 }
 
 void ledsUpdate(Led leds[], int count, Adafruit_MCP23017& _mcp) {
   for (int i = 0; i < count; i++) {
-    ledUpdate(leds[i], _mcp);
+    leds[i].update();
   }
 }
 
@@ -188,28 +130,28 @@ void systemDiagnostics() {
   alphaWriteString("TEST", alpha4);
   
   for(int i = 0; i < 3; i++) {
-    ledsOn(LEDs_0, LEDs_0_Size, mcp0);
-    ledsOn(LEDs_1, LEDs_1_Size, mcp1);
+    ledsOn(LEDs_0, LEDs_0_Size);
+    ledsOn(LEDs_1, LEDs_1_Size);
     delay(3000);
     
-    ledsOff(LEDs_0, LEDs_0_Size, mcp0);
-    ledsOff(LEDs_1, LEDs_1_Size, mcp1);
+    ledsOff(LEDs_0, LEDs_0_Size);
+    ledsOff(LEDs_1, LEDs_1_Size);
     delay(500);
   }
 
   alphaClear(alpha4);
 
   for (int i = 0; i < LEDs_0_Size; i++) {
-    ledOn(LEDs_0[i], mcp0);
+    LEDs_0[i].on();
     delay(250);
   }
-  ledsOff(LEDs_0, LEDs_0_Size, mcp0);
+  ledsOff(LEDs_0, LEDs_0_Size);
 
   for (int i = 0; i < LEDs_1_Size; i++) {
-    ledOn(LEDs_1[i], mcp1);
+    LEDs_1[i].on();
     delay(250);
   }
-  ledsOff(LEDs_1, LEDs_1_Size, mcp1);
+  ledsOff(LEDs_1, LEDs_1_Size);
 
   alphaWriteString("X   ", alpha4);
   delay(250);
@@ -227,44 +169,48 @@ void setup() {
   Serial.begin(9600);
   
   mcp0.begin(0);
-  mcp0.pinMode(0, INPUT);
-  mcp0.pullUp(0, HIGH);
-  
-  initLEDs(LEDs_0, LEDs_0_Size, mcp0);
-  ledsOff(LEDs_0, LEDs_0_Size, mcp0);
+  setupLEDs(LEDs_0, LEDs_0_Size);
+  ledsOff(LEDs_0, LEDs_0_Size);
 
 
   mcp1.begin(1);
-  mcp1.pinMode(0, INPUT);
-  mcp1.pullUp(0, HIGH);
-  
-  initLEDs(LEDs_1, LEDs_1_Size, mcp1);
-  ledsOff(LEDs_1, LEDs_1_Size, mcp1);
+  setupLEDs(LEDs_1, LEDs_1_Size);
+  ledsOff(LEDs_1, LEDs_1_Size);
 
 
 
   alpha4.begin(0x70);  // pass in the address
   alphaClear(alpha4);
+
+  //systemDiagnostics();  
+
+  b0.setup();
+  b1.setup();
 }
 
-
-// flip the pin #0 up and down
-
-void loop() {
+void loop() {  
 
   ledsUpdate(LEDs_0, LEDs_0_Size, mcp0);
   ledsUpdate(LEDs_1, LEDs_1_Size, mcp1);
 
-  if(mcp0.digitalRead(0) == LOW) {
-    ledOnFor(LEDs_0[4], mcp0, 1500);
-    ledOnFor(LEDs_0[3], mcp0, 700);
-    //alphaWriteString("8888", alpha4);
-    //ledsBlink(LEDs_0, LEDs_0_Size, mcp0, 1000);
-    //ledsBlink(LEDs_1, LEDs_1_Size, mcp1, 1000);
+  byte b1val = b0.poll();
+  if(b1val == LOW) {
+    LEDs_0[1].on();
+    LEDs_0[2].startBlinking(250);
+  }
+  else if(b1val == HIGH) {
+    LEDs_0[1].off();
+    LEDs_0[2].stopBlinking();
   }
 
-  if(mcp1.digitalRead(0) == LOW) {
-    systemDiagnostics();
+  if(b1.poll() != UNCHANGED) {
+    LEDs_1[6].toggle();
   }
-  
+
+  // Read joystic values - returns value between 0 and 1023
+  // analogRead(A0); 
+  //char buff[4];
+  //itoa(analogRead(A0), buff, 10);
+  //alphaWriteString(buff, alpha4);
+
 }
