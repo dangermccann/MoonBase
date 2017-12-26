@@ -8,7 +8,7 @@
 class Button {
   public:
     byte state;
-    int pin;
+    byte pin;
        
     Button(Adafruit_MCP23017* _mcp, int _pin);
     void setup();

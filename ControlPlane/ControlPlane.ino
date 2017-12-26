@@ -167,7 +167,7 @@ void systemDiagnostics() {
 
 
 void setup() {  
-  Serial.begin(9600);
+  Serial.begin(115200);
   
   mcp0.begin(0);
   setupLEDs(LEDs_0, LEDs_0_Size);
@@ -184,6 +184,7 @@ void setup() {
   alphaClear(alpha4);
 
   //systemDiagnostics();  
+  
 
   b0.setup();
   b1.setup();
@@ -203,6 +204,10 @@ void loop() {
     LEDs_0[1].off();
     LEDs_0[2].stopBlinking();
   }
+
+  char buff[5];
+  itoa(analogRead(A0), buff, 10);
+  Serial.println(analogRead(buff));
 
   if(b1.poll() != UNCHANGED) {
     LEDs_1[6].toggle();

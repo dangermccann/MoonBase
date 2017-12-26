@@ -8,7 +8,7 @@
 
 class Led {
   public:
-    int pin;
+    byte pin;
     byte state;
 
     Led(Adafruit_MCP23017* _mcp, int _pin);
