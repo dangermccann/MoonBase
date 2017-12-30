@@ -53,6 +53,9 @@ public abstract class wrmhlThread { // wrmhlThread is the common Thread for rece
 			this.baudRate = baudRate;
 			this.readTimeout = readTimeout;
 			this.QueueLenght = QueueLenght;
+
+			outputQueue = Queue.Synchronized( new Queue() );
+			inputQueue  = Queue.Synchronized( new Queue() );
 	}
 
 	public wrmhlThread(string portName, int baudRate) { // no readTimeout.
@@ -61,9 +64,6 @@ public abstract class wrmhlThread { // wrmhlThread is the common Thread for rece
 	}
 
 	public void startThread() { // Creates and starts the thread
-		outputQueue = Queue.Synchronized( new Queue() );
-		inputQueue  = Queue.Synchronized( new Queue() );
-
 		WRMHLthread = new Thread (ThreadLoop);
 		WRMHLthread.Start ();
 	}

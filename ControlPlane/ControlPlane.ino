@@ -119,7 +119,6 @@ void setup() {
 
   alphaWriteString("  GO", Alphas[0]);
 
-  LEDs[3]->startBlinking(500);
   LEDs[4]->onFor(1000);
 }
 

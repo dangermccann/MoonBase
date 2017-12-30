@@ -19,13 +19,15 @@ public class MovementController : MonoBehaviour {
 
 		//Debug.Log(analog.AnalogInput.ToString() + ": 0x" + analog.AnalogValue.ToString());
 		float val = analog.AnalogValue;
-		val = (val - 512f) / 512f;
+		val = (val - 511.5f) / 511.5f;
+		if(Mathf.Abs(val) < 0.1f)
+			val = 0;
 
-		if(analog.AnalogInput == ControlPlane.AnalogInputs.JoystickX) {
-			m_HorizontalVirtualAxis.Update(val * -1);
+		if(analog.AnalogInput == AnalogInputValues.JoystickX) {
+			m_HorizontalVirtualAxis.Update(val);
 		}
 
-		if(analog.AnalogInput == ControlPlane.AnalogInputs.JoystickY) {
+		if(analog.AnalogInput == AnalogInputValues.JoystickY) {
 			m_VerticalVirtualAxis.Update(val);
 		}
 	}
