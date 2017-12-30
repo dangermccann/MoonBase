@@ -4,7 +4,7 @@
 
 #include "Led.h"
 
-Led::Led(Adafruit_MCP23017* _mcp, int _pin) {
+Led::Led(Adafruit_MCP23017* _mcp, byte _pin) {
   mcp = _mcp;
   pin = _pin;
   state = LED_OFF;
@@ -56,7 +56,7 @@ void Led::toggle() {
 
 void Led::update() {
   if(state != nextState) {
-    unsigned long current = millis();
+    unsigned long current =  millis();
     if(current - updateTime > nextStateDelay) {
       if(blink) {
         byte next = state;

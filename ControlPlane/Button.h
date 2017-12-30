@@ -10,7 +10,7 @@ class Button {
     byte state;
     byte pin;
        
-    Button(Adafruit_MCP23017* _mcp, int _pin);
+    Button(Adafruit_MCP23017* _mcp, byte _pin);
     void setup();
     byte poll();
     

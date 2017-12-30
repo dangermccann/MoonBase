@@ -1,3 +1,4 @@
+#include "ControlPlane.h"
 #include <Wire.h>
 #include "Adafruit_MCP23017.h"
 #include <Adafruit_GFX.h>
@@ -6,113 +7,154 @@
 #include "Led.h"
 
 /*
- *  -- MCP23017 Address Selection --
- *  addr 0 = A2 low,  A1 low,  A0 low  000
- *  addr 1 = A2 low,  A1 low,  A0 high 001
- *  addr 2 = A2 low,  A1 high, A0 low  010
- *  addr 3 = A2 low,  A1 high, A0 high 011
- *  addr 4 = A2 high, A1 low,  A0 low  100
- *  addr 5 = A2 high, A1 low,  A0 high 101
- *  addr 6 = A2 high, A1 high, A0 low  110
- *  addr 7 = A2 high, A1 high, A0 high 111
- */
+    -- MCP23017 Address Selection --
+    addr 0 = A2 low,  A1 low,  A0 low  000
+    addr 1 = A2 low,  A1 low,  A0 high 001
+    addr 2 = A2 low,  A1 high, A0 low  010
+    addr 3 = A2 low,  A1 high, A0 high 011
+    addr 4 = A2 high, A1 low,  A0 low  100
+    addr 5 = A2 high, A1 low,  A0 high 101
+    addr 6 = A2 high, A1 high, A0 low  110
+    addr 7 = A2 high, A1 high, A0 high 111
+*/
 
 /*
- *  -- MCP23017 Pin Assignment --
- *  Connect pin #12 of the expander to Analog 5 (i2c clock)
- *  Connect pin #13 of the expander to Analog 4 (i2c data)
- *  Connect pins #15, 16 and 17 of the expander to ground or 5V (address selection)
- *  Connect pin #9 of the expander to 5V (power)
- *  Connect pin #10 of the expander to ground (common ground)
- *  Connect pin #18 through a ~10kohm resistor to 5V (reset pin, active low)
- */
+    -- MCP23017 Pin Assignment --
+    Connect pin #12 of the expander to Analog 5 (i2c clock)
+    Connect pin #13 of the expander to Analog 4 (i2c data)
+    Connect pins #15, 16 and 17 of the expander to ground or 5V (address selection)
+    Connect pin #9 of the expander to 5V (power)
+    Connect pin #10 of the expander to ground (common ground)
+    Connect pin #18 through a ~10kohm resistor to 5V (reset pin, active low)
+*/
 
 /*
- * -- ATmega328P Pin Assignment -- 
- * Connect Vin and UBS to 5V
- * Connect both GND pins to Ground
- * A4 and A5 are I2C bus
- */
+   -- ATmega328P Pin Assignment --
+   Connect Vin and UBS to 5V
+   Connect both GND pins to Ground
+   A4 and A5 are I2C bus
+*/
+
+#define ANALOG_SEND_FREQUENCY 50
+
+unsigned long lastAnalogSend = 0;
 
 Adafruit_MCP23017 mcp0;
 Adafruit_MCP23017 mcp1;
-Adafruit_AlphaNum4 alpha4 = Adafruit_AlphaNum4();
 
 
+#define LEDs_Size 28
+Led* LEDs[LEDs_Size] = {
+  // MCP 0
+  new Led(&mcp0, 0),
+  new Led(&mcp0, 1),
+  new Led(&mcp0, 2),
+  new Led(&mcp0, 3),
+  new Led(&mcp0, 4),
+  new Led(&mcp0, 5),
+  new Led(&mcp0, 6),
+  new Led(&mcp0, 7),
+  new Led(&mcp0, 8),
+  new Led(&mcp0, 9),
+  new Led(&mcp0, 10),
+  new Led(&mcp0, 11),
+  new Led(&mcp0, 12),
+  new Led(&mcp0, 13),
 
-#define LEDs_0_Size 14
-Led LEDs_0[LEDs_0_Size] = {
-  Led(&mcp0, 1),
-  Led(&mcp0, 2),
-  Led(&mcp0, 3),
-  Led(&mcp0, 4),
-  Led(&mcp0, 5),
-  Led(&mcp0, 6),
-  Led(&mcp0, 7),
-  Led(&mcp0, 8),
-  Led(&mcp0, 9),
-  Led(&mcp0, 10),
-  Led(&mcp0, 11),
-  Led(&mcp0, 12),
-  Led(&mcp0, 13),
-  Led(&mcp0, 14),
+  // MCP 1
+  new Led(&mcp1, 2),
+  new Led(&mcp1, 3),
+  new Led(&mcp1, 4),
+  new Led(&mcp1, 5),
+  new Led(&mcp1, 6),
+  new Led(&mcp1, 7),
+  new Led(&mcp1, 8),
+  new Led(&mcp1, 9),
+  new Led(&mcp1, 10),
+  new Led(&mcp1, 11),
+  new Led(&mcp1, 12),
+  new Led(&mcp1, 13),
+  new Led(&mcp1, 14),
+  new Led(&mcp1, 15),
+};
+
+#define Buttons_Size 4
+Button* Buttons[Buttons_Size] = {
+  new Button(&mcp0, 14),
+  new Button(&mcp0, 15),
+  new Button(&mcp1, 0),
+  new Button(&mcp1, 1),
+};
+
+#define Alphas_Size 1
+Adafruit_AlphaNum4 Alphas[Alphas_Size] = {
+  Adafruit_AlphaNum4(),
 };
 
 
-#define LEDs_1_Size 15
-Led LEDs_1[LEDs_1_Size] = {
-  Led(&mcp1, 1),
-  Led(&mcp1, 2),
-  Led(&mcp1, 3),
-  Led(&mcp1, 4),
-  Led(&mcp1, 5),
-  Led(&mcp1, 6),
-  Led(&mcp1, 7),
-  Led(&mcp1, 8),
-  Led(&mcp1, 9),
-  Led(&mcp1, 10),
-  Led(&mcp1, 11),
-  Led(&mcp1, 12),
-  Led(&mcp1, 13),
-  Led(&mcp1, 14),
-  Led(&mcp1, 15),
-};
+void setup() {
+  mcp0.begin(0);
+  mcp1.begin(1);
 
-Button b0 = Button(&mcp0, 15);
-Button b1 = Button(&mcp1, 0);
+  setupLEDs(LEDs, LEDs_Size);
 
 
-void setupLEDs(Led leds[], int count) {
+
+  Alphas[0].begin(0x70);  // pass in the address
+  //alphaClear(Alphas[0]);
+  alphaWriteString("INIT", Alphas[0]);
+  ledsOn(LEDs, LEDs_Size);
+
+  delay(1000);
+
+  ledsOff(LEDs, LEDs_Size);
+
+
+  for (int i = 0; i < Buttons_Size; i++) {
+    Button* b = Buttons[i];
+    b->setup();
+  }
+
+  Serial.begin(115200);
+
+  alphaWriteString("  GO", Alphas[0]);
+
+  LEDs[3]->startBlinking(500);
+  LEDs[4]->onFor(1000);
+}
+
+void loop() {
+  ledsUpdate(LEDs, LEDs_Size);
+  processIncomingCommands();
+  processButtons();
+  processAnalog();
+}
+
+
+void setupLEDs(Led* leds[], int count) {
   for (int i = 0; i < count; i++) {
-    Led led = leds[i];
-    led.setup();
+    Led* led = leds[i];
+    led->setup();
   }
 }
 
-void ledsOn(Led leds[], int count) {
+void ledsOn(Led* leds[], int count) {
   for (int i = 0; i < count; i++) {
-    leds[i].on();
+    leds[i]->on();
   }
 }
 
-void ledsOff(Led leds[], int count) {
+void ledsOff(Led* leds[], int count) {
   for (int i = 0; i < count; i++) {
-    leds[i].off();
+    leds[i]->off();
   }
 }
 
-void ledsBlink(Led leds[], int count, Adafruit_MCP23017& _mcp, unsigned long duration) {
+void ledsUpdate(Led* leds[], int count) {
   for (int i = 0; i < count; i++) {
-    leds[i].startBlinking(duration);
+    leds[i]->update();
   }
 }
-
-void ledsUpdate(Led leds[], int count, Adafruit_MCP23017& _mcp) {
-  for (int i = 0; i < count; i++) {
-    leds[i].update();
-  }
-}
-
 
 void alphaWriteString(char str[], Adafruit_AlphaNum4& _alpha) {
   _alpha.writeDigitAscii(0, str[0]);
@@ -127,101 +169,172 @@ void alphaClear(Adafruit_AlphaNum4& _alpha) {
 }
 
 
+
+void processIncomingCommands() {
+  if (Serial.available() == 0)
+    return;
+
+  // wait for start of command, as signed by magic number
+  int start = Serial.peek();
+  while (start != COMMAND_START_1) {
+    Serial.read();
+    start = Serial.peek();
+    if (start == -1)
+      return;
+  }
+
+  if (Serial.available() < COMMAND_LENGTH)
+    return;
+
+  byte commandBuffer[COMMAND_LENGTH];
+  size_t bytesRead = Serial.readBytes(commandBuffer, COMMAND_LENGTH);
+
+  if (bytesRead != COMMAND_LENGTH)
+    return;
+
+  // validate magic number
+  if (commandBuffer[0] != COMMAND_START_1)
+    return;
+
+  if (commandBuffer[1] != COMMAND_START_2)
+    return;
+
+
+  byte instruction = commandBuffer[COMMAND_OFFSET_INSTRUCTION];
+  byte index = commandBuffer[COMMAND_OFFSET_PARAMETER];
+  switch (instruction) {
+    case COMMAND_LED_OFF:
+      LEDs[index]->off();
+      break;
+
+    case COMMAND_LED_ON:
+      LEDs[index]->on();
+      break;
+
+    case COMMAND_LED_OFF_FOR:
+      LEDs[index]->offFor(bytesToUInt(commandBuffer[COMMAND_OFFSET_PARAMETER], commandBuffer[COMMAND_OFFSET_PARAMETER + 1]));
+      break;
+
+    case COMMAND_LED_ON_FOR:
+      LEDs[index]->onFor(bytesToUInt(commandBuffer[COMMAND_OFFSET_PARAMETER], commandBuffer[COMMAND_OFFSET_PARAMETER + 1]));
+      break;
+
+    case COMMAND_LED_BLINK:
+      LEDs[index]->startBlinking(bytesToUInt(commandBuffer[COMMAND_OFFSET_PARAMETER], commandBuffer[COMMAND_OFFSET_PARAMETER + 1]));
+      break;
+
+    case COMMAND_SET_ALPHA:
+      alphaWriteString(commandBuffer + COMMAND_OFFSET_PARAMETER + 1, Alphas[index]);
+      break;
+
+  }
+
+}
+
+unsigned int bytesToUInt(byte b1, byte b2) {
+  unsigned int i = (b1 << 8) | b2;
+  return i;
+}
+
+
+
+int processButtons() {
+  int sent = 0;
+
+  for (byte i = 0; i < Buttons_Size; i++) {
+    Button* b = Buttons[i];
+    byte bVal = b->poll();
+
+    if (bVal != UNCHANGED) {
+      sendInputChanged(i, bVal);
+      if(bVal == HIGH)
+        LEDs[7]->onFor(200);
+      else 
+        LEDs[8]->onFor(200);
+
+        sent++;
+    }
+  }
+
+  if(sent > 0)
+    Serial.flush();
+
+  return sent;
+}
+
+void processAnalog() {
+  unsigned long current = millis();
+  if(current - lastAnalogSend < ANALOG_SEND_FREQUENCY) {
+    return;
+  }
+
+  lastAnalogSend = current;
+  sendAnalogValue(JOYSTICK_X, analogRead(A1));
+  sendAnalogValue(JOYSTICK_Y, analogRead(A0));
+  Serial.flush();
+}
+
+void sendInputChanged(byte index, byte value) {
+  byte eventBuffer[EVENT_LENGTH];
+  initEvent(eventBuffer);
+
+  eventBuffer[EVENT_OFFSET_INSTRUCTION] = EVENT_INPUT_CHANGED;
+  eventBuffer[EVENT_OFFSET_PARAMETER] = index;
+  eventBuffer[EVENT_OFFSET_PARAMETER + 1] = value;
+
+  Serial.write(eventBuffer, EVENT_LENGTH);
+}
+
+void sendAnalogValue(byte index, unsigned int value) {
+  byte eventBuffer[EVENT_LENGTH];
+  initEvent(eventBuffer);
+
+  eventBuffer[EVENT_OFFSET_INSTRUCTION] = EVENT_ANALOG_VALUE;
+  eventBuffer[EVENT_OFFSET_PARAMETER] = index;
+  eventBuffer[EVENT_OFFSET_PARAMETER + 1] = (value >> 8) & 0xFF;
+  eventBuffer[EVENT_OFFSET_PARAMETER + 2] = value & 0xFF;
+
+  Serial.write(eventBuffer, EVENT_LENGTH);
+}
+
+void initEvent(byte* eventBuffer) {
+  eventBuffer[0] = EVENT_START_1;
+  eventBuffer[1] = EVENT_START_2;
+  for (int i = 2; i < EVENT_LENGTH; i++) {
+    eventBuffer[i] = EVENT_PAD;
+  }
+
+}
+
+
+
 void systemDiagnostics() {
-  alphaWriteString("TEST", alpha4);
-  
-  for(int i = 0; i < 3; i++) {
-    ledsOn(LEDs_0, LEDs_0_Size);
-    ledsOn(LEDs_1, LEDs_1_Size);
+  alphaWriteString("TEST", Alphas[0]);
+
+  for (int i = 0; i < 3; i++) {
+    ledsOn(LEDs, LEDs_Size);
     delay(3000);
-    
-    ledsOff(LEDs_0, LEDs_0_Size);
-    ledsOff(LEDs_1, LEDs_1_Size);
+
+    ledsOff(LEDs, LEDs_Size);
     delay(500);
   }
 
-  alphaClear(alpha4);
+  alphaClear(Alphas[0]);
 
-  for (int i = 0; i < LEDs_0_Size; i++) {
-    LEDs_0[i].on();
+  for (int i = 0; i < LEDs_Size; i++) {
+    LEDs[i]->on();
     delay(250);
   }
-  ledsOff(LEDs_0, LEDs_0_Size);
+  ledsOff(LEDs, LEDs_Size);
 
-  for (int i = 0; i < LEDs_1_Size; i++) {
-    LEDs_1[i].on();
-    delay(250);
-  }
-  ledsOff(LEDs_1, LEDs_1_Size);
 
-  alphaWriteString("X   ", alpha4);
+  alphaWriteString("X   ", Alphas[0]);
   delay(250);
-  alphaWriteString(" X  ", alpha4);
+  alphaWriteString(" X  ", Alphas[0]);
   delay(250);
-  alphaWriteString("  X ", alpha4);
+  alphaWriteString("  X ", Alphas[0]);
   delay(250);
-  alphaWriteString("   X", alpha4);
+  alphaWriteString("   X", Alphas[0]);
   delay(250);
-  alphaClear(alpha4);
-}
-
-
-void setup() {  
-  Serial.begin(115200);
-  
-  mcp0.begin(0);
-  setupLEDs(LEDs_0, LEDs_0_Size);
-  ledsOff(LEDs_0, LEDs_0_Size);
-
-
-  mcp1.begin(1);
-  setupLEDs(LEDs_1, LEDs_1_Size);
-  ledsOff(LEDs_1, LEDs_1_Size);
-
-
-
-  alpha4.begin(0x70);  // pass in the address
-  alphaClear(alpha4);
-
-  //systemDiagnostics();  
-  
-
-  b0.setup();
-  b1.setup();
-}
-
-void loop() {  
-
-  ledsUpdate(LEDs_0, LEDs_0_Size, mcp0);
-  ledsUpdate(LEDs_1, LEDs_1_Size, mcp1);
-
-  byte b1val = b0.poll();
-  if(b1val == LOW) {
-    LEDs_0[1].on();
-    LEDs_0[2].startBlinking(250);
-  }
-  else if(b1val == HIGH) {
-    LEDs_0[1].off();
-    LEDs_0[2].stopBlinking();
-  }
-
-  char val[5];
-  itoa(analogRead(A0), val, 10);
-  Serial.print("Y:");
-  Serial.println(val);
-
-  itoa(analogRead(A1), val, 10);
-  Serial.print("X:");
-  Serial.println(val);
-
-  if(b1.poll() != UNCHANGED) {
-    LEDs_1[6].toggle();
-  }
-
-  // Read joystic values - returns value between 0 and 1023
-  // analogRead(A0); 
-  //char buff[4];
-  //itoa(analogRead(A0), buff, 10);
-  //alphaWriteString(buff, alpha4);
-
+  alphaClear(Alphas[0]);
 }

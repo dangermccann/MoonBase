@@ -11,7 +11,7 @@ class Led {
     byte pin;
     byte state;
 
-    Led(Adafruit_MCP23017* _mcp, int _pin);
+    Led(Adafruit_MCP23017* _mcp, byte _pin);
 
     void setup();
     void on();
@@ -21,8 +21,9 @@ class Led {
     void startBlinking(unsigned long duration);
     void stopBlinking();
     void toggle();
+    void set(byte value);
     void update();
-    
+        
 
   private:
     Adafruit_MCP23017* mcp;
@@ -30,7 +31,5 @@ class Led {
     unsigned long updateTime;
     unsigned long nextStateDelay;
     bool blink;
-
-    void set(byte value);
 };
 

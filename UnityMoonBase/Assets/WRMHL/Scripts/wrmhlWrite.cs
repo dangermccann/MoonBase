@@ -18,7 +18,7 @@ public class wrmhlWrite : MonoBehaviour {
 	public int ReadTimeout = 20;
 
 	[Tooltip("Something you want to send.")]
-	public string dataToSend = "Hello World!";
+	public byte[] dataToSend = new byte[] { 1, 2, 3, 4 };
 
 	[Tooltip("QueueLenght")]
 	public int QueueLenght = 1;

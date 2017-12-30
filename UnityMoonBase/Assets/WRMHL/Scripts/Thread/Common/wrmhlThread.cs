@@ -90,11 +90,11 @@ public abstract class wrmhlThread { // wrmhlThread is the common Thread for rece
  	}
 	}
 
-	public string readQueueThread(){ // return the data stocked in the Queue. Independent from the protocol.
+	public byte[] readQueueThread(){ // return the data stocked in the Queue. Independent from the protocol.
 		if (inputQueue.Count == 0)
 			return null;
 
-		return (string)inputQueue.Dequeue ();
+		return (byte[]) inputQueue.Dequeue();
 	}
 
 
@@ -102,7 +102,7 @@ public abstract class wrmhlThread { // wrmhlThread is the common Thread for rece
 			return null; // TO DO: Delete it
 		}
 
-	public void writeThread(string dataToSend){ // add the data to the write Queue. Independent from the protocol.
+	public void writeThread(byte[] dataToSend){ // add the data to the write Queue. Independent from the protocol.
 		outputQueue.Enqueue (dataToSend);
 	}
 
@@ -111,17 +111,17 @@ public abstract class wrmhlThread { // wrmhlThread is the common Thread for rece
 		while (threadIsLooping ())
 		{
 			// read data
-			object dataComingFromDevice = ReadProtocol();
+			byte[] dataComingFromDevice = ReadProtocol();
 			if (dataComingFromDevice != null) {
 				if (inputQueue.Count < QueueLenght)
 				{
-						inputQueue.Enqueue(dataComingFromDevice);
+					inputQueue.Enqueue(dataComingFromDevice);
 				}
 		}
 			// Send data
 			if (outputQueue.Count != 0)
 			{
-				object dataToSend = outputQueue.Dequeue();
+				byte[] dataToSend = (byte[]) outputQueue.Dequeue();
 				SendProtocol(dataToSend);
 			}
 		}
@@ -129,7 +129,7 @@ public abstract class wrmhlThread { // wrmhlThread is the common Thread for rece
 		deviceSerial.Close(); // Close th e data Flow.
 }
 
-		public abstract string ReadProtocol(); // with Alpha 0.1 Overide by the protocol wrmhlThread_ReadLines to be used as reading protocol.
+		public abstract byte[] ReadProtocol(); // with Alpha 0.1 Overide by the protocol wrmhlThread_ReadLines to be used as reading protocol.
 
-		public abstract void SendProtocol(object message); // with Alpha 0.1 Overide by the protocol wormhlThread_ReadLines to be used as reading protocol.
+		public abstract void SendProtocol(byte[] bytes); // with Alpha 0.1 Overide by the protocol wormhlThread_ReadLines to be used as reading protocol.
 }

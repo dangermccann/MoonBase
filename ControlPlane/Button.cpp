@@ -4,7 +4,7 @@
 
 #include "Button.h"
 
-Button::Button(Adafruit_MCP23017* _mcp, int _pin) {
+Button::Button(Adafruit_MCP23017* _mcp, byte _pin) {
   mcp = _mcp;
   pin = _pin;
 }
@@ -19,8 +19,8 @@ void Button::setup() {
 
 byte Button::poll() {
   // read the state of the switch into a local variable:
-  int reading = mcp->digitalRead(pin);
-
+  byte reading = (byte) mcp->digitalRead(pin);
+  
   // check to see if you just pressed the button
   // (i.e. the input went from LOW to HIGH), and you've waited long enough
   // since the last press to ignore any noise:

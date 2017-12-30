@@ -62,11 +62,11 @@ public class wrmhl {
 	// ========================================================================================
 
 	// read the data from your device:
-	public string readQueue(){ // Return the string coming from the device.
+	public byte[] readQueue(){ // Return the string coming from the device.
 		return deviceReader.readQueueThread(); // call the Thread read method.
 	}
 
-	public void send(string dataToSend){
+	public void send(byte[] dataToSend){
 		deviceReader.writeThread(dataToSend); // call the Thread write method.
 }
 }
