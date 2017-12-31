@@ -87,8 +87,8 @@ Button* Buttons[Buttons_Size] = {
 };
 
 #define Alphas_Size 1
-Adafruit_AlphaNum4 Alphas[Alphas_Size] = {
-  Adafruit_AlphaNum4(),
+Adafruit_AlphaNum4* Alphas[Alphas_Size] = {
+  new Adafruit_AlphaNum4(),
 };
 
 
@@ -97,12 +97,15 @@ void setup() {
   mcp1.begin(1);
 
   setupLEDs(LEDs, LEDs_Size);
+  pinMode(ERROR_PIN, OUTPUT);
 
-
-
-  Alphas[0].begin(0x70);  // pass in the address
-  //alphaClear(Alphas[0]);
-  alphaWriteString("INIT", Alphas[0]);
+  // run init sequence - flash all lights and alphas
+  for(int i = 0; i < Alphas_Size; i++) {
+    Alphas[i]->begin(0x70);  // pass in the address
+    //alphaClear(Alphas[0]);
+    alphaWriteString("INIT", Alphas[i]);
+  }
+  
   ledsOn(LEDs, LEDs_Size);
 
   delay(1000);
@@ -155,15 +158,15 @@ void ledsUpdate(Led* leds[], int count) {
   }
 }
 
-void alphaWriteString(char str[], Adafruit_AlphaNum4& _alpha) {
-  _alpha.writeDigitAscii(0, str[0]);
-  _alpha.writeDigitAscii(1, str[1]);
-  _alpha.writeDigitAscii(2, str[2]);
-  _alpha.writeDigitAscii(3, str[3]);
-  _alpha.writeDisplay();
+void alphaWriteString(char str[], Adafruit_AlphaNum4* _alpha) {
+  _alpha->writeDigitAscii(0, str[0]);
+  _alpha->writeDigitAscii(1, str[1]);
+  _alpha->writeDigitAscii(2, str[2]);
+  _alpha->writeDigitAscii(3, str[3]);
+  _alpha->writeDisplay();
 }
 
-void alphaClear(Adafruit_AlphaNum4& _alpha) {
+void alphaClear(Adafruit_AlphaNum4* _alpha) {
   alphaWriteString("    ", _alpha);
 }
 
@@ -188,16 +191,15 @@ void processIncomingCommands() {
   byte commandBuffer[COMMAND_LENGTH];
   size_t bytesRead = Serial.readBytes(commandBuffer, COMMAND_LENGTH);
 
-  if (bytesRead != COMMAND_LENGTH)
+  if (bytesRead != COMMAND_LENGTH) {
+    setError();
     return;
+  }
 
-  // validate magic number
-  if (commandBuffer[0] != COMMAND_START_1)
+  if(validateCommand == false) {
+    setError();
     return;
-
-  if (commandBuffer[1] != COMMAND_START_2)
-    return;
-
+  }
 
   byte instruction = commandBuffer[COMMAND_OFFSET_INSTRUCTION];
   byte index = commandBuffer[COMMAND_OFFSET_PARAMETER];
@@ -226,8 +228,63 @@ void processIncomingCommands() {
       alphaWriteString(commandBuffer + COMMAND_OFFSET_PARAMETER + 1, Alphas[index]);
       break;
 
+    case COMMAND_GET_INPUT: {
+      Button* b = Buttons[index];
+      sendInputState(index, b->state);
+      break;
+    }
+
+    case COMMAND_GET_ANALOG: {
+      int value = 0xFF;
+      if(index == JOYSTICK_X) {
+        value = analogRead(A1);
+      }
+      if(index == JOYSTICK_Y) {
+        value = analogRead(A0);
+      }
+      if(index == FREE_MEMORY) {
+        value = freeRAM();
+      }
+      sendAnalogValue(index, value);
+      break;
+    }
+
   }
 
+}
+
+bool validateCommand(byte* commandBuffer) {
+  if (commandBuffer[0] != COMMAND_START_1)
+    return false;
+
+  if (commandBuffer[1] != COMMAND_START_2)
+    return false;
+
+  byte instruction = commandBuffer[COMMAND_OFFSET_INSTRUCTION];
+  byte index = commandBuffer[COMMAND_OFFSET_PARAMETER];
+
+  switch (instruction) {
+    case COMMAND_LED_OFF:
+    case COMMAND_LED_ON:
+    case COMMAND_LED_OFF_FOR:
+    case COMMAND_LED_ON_FOR:
+    case COMMAND_LED_BLINK:
+      if(index > LEDs_Size)
+        return false;
+      break;
+
+    case COMMAND_SET_ALPHA:
+      if(index > Alphas_Size)
+        return false;
+      break;
+
+    case COMMAND_GET_INPUT:
+      if(index > Buttons_Size) 
+        return false;
+      break;
+  }
+    
+  return true;
 }
 
 unsigned int bytesToUInt(byte b1, byte b2) {
@@ -235,6 +292,9 @@ unsigned int bytesToUInt(byte b1, byte b2) {
   return i;
 }
 
+void setError() {
+  digitalWrite(ERROR_PIN, HIGH);
+}
 
 
 int processButtons() {
@@ -245,7 +305,7 @@ int processButtons() {
     byte bVal = b->poll();
 
     if (bVal != UNCHANGED) {
-      sendInputChanged(i, bVal);
+      sendInputState(i, bVal);
       if(bVal == HIGH)
         LEDs[7]->onFor(200);
       else 
@@ -273,7 +333,7 @@ void processAnalog() {
   Serial.flush();
 }
 
-void sendInputChanged(byte index, byte value) {
+void sendInputState(byte index, byte value) {
   byte eventBuffer[EVENT_LENGTH];
   initEvent(eventBuffer);
 
@@ -305,7 +365,11 @@ void initEvent(byte* eventBuffer) {
 
 }
 
-
+int freeRAM() {
+  extern int __heap_start, *__brkval; 
+  int v;   
+  return (int) &v - (__brkval == 0 ? (int) &__heap_start : (int) __brkval); 
+}
 
 void systemDiagnostics() {
   alphaWriteString("TEST", Alphas[0]);

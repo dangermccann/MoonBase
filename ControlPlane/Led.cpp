@@ -11,8 +11,14 @@ Led::Led(Adafruit_MCP23017* _mcp, byte _pin) {
 }
 
 void Led::setup() {
-  mcp->pinMode(pin , OUTPUT);
-  mcp->digitalWrite(pin, state);
+  if(mcp != NULL) {
+    mcp->pinMode(pin , OUTPUT);
+    mcp->digitalWrite(pin, state);
+  }
+  else {
+    pinMode(pin , OUTPUT);
+    digitalWrite(pin, state);
+  }
   updateTime = millis();
 }
 void Led::on() { 
@@ -63,7 +69,11 @@ void Led::update() {
         state = nextState;
         nextState = next;
         updateTime = millis();
-        mcp->digitalWrite(pin, state);
+
+        if(mcp != NULL)
+          mcp->digitalWrite(pin, state);
+        else
+          digitalWrite(pin, state);
       }
       else {
         set(nextState);
@@ -78,7 +88,11 @@ void Led::set(byte value) {
   updateTime = millis();
   nextStateDelay = 0;
   blink = false;
-  mcp->digitalWrite(pin, state);
+
+  if(mcp != NULL)
+    mcp->digitalWrite(pin, state);
+  else
+    digitalWrite(pin, state);
 }
 
 #endif

@@ -15,7 +15,8 @@
 #define COMMAND_LED_ON_FOR          3
 #define COMMAND_LED_BLINK           4
 #define COMMAND_SET_ALPHA           5
-
+#define COMMAND_GET_INPUT           6
+#define COMMAND_GET_ANALOG          7
 
 
 // Event structure 
@@ -32,12 +33,13 @@
 // Inputs
 #define JOYSTICK_X                0xA0
 #define JOYSTICK_Y                0xA1
+#define FREE_MEMORY               0xAF
 
 #define BUTTON_TEST_1             0x00
 #define BUTTON_TEST_2             0x01
 
 
-
+#define ERROR_PIN                 13
 
 
 

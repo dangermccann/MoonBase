@@ -8,9 +8,9 @@ public class DebugUI : MonoBehaviour {
 
 	public ControlPlane control;
 	public GameObject inputContainer;
-	public GameObject joystickX, joystickY;
+	public GameObject joystickX, joystickY, memory;
 
-	Text joystickXText, joystickYText;
+	Text joystickXText, joystickYText, memoryText;
 
 	GameObject panel;
 
@@ -23,6 +23,7 @@ public class DebugUI : MonoBehaviour {
 
 		joystickXText = joystickX.GetComponent<Text>();
 		joystickYText = joystickY.GetComponent<Text>();
+		memoryText = memory.GetComponent<Text>();
 
 		//IEnumerator coroutine = WaitAndFlash(1.0f);
         //StartCoroutine(coroutine);
@@ -32,6 +33,9 @@ public class DebugUI : MonoBehaviour {
 	void Update() {
 		if(Input.GetKeyDown(KeyCode.Tab)) {
 			panel.SetActive(!panel.activeSelf);
+
+			if(panel.activeSelf) 
+				control.RequestAnalogValue((byte) AnalogInputValues.FreeMemory);
 		}
 	}
 
@@ -52,6 +56,9 @@ public class DebugUI : MonoBehaviour {
 
 		if(args.Event.AnalogInput == AnalogInputValues.JoystickY)
 			joystickYText.text = args.Event.AnalogValue.ToString();
+
+		if(args.Event.AnalogInput == AnalogInputValues.FreeMemory)
+			memoryText.text = args.Event.AnalogValue.ToString() + " bytes free";
 	}
 
 	void HandleDigitalEvent(object sender, DigitalInputChangedArgs args) {

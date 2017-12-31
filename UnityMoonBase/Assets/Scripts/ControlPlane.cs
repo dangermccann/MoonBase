@@ -6,8 +6,9 @@ using System.Linq;
 using UnityEngine;
 
 public enum AnalogInputValues {
-	JoystickX = 0xA0, 
-	JoystickY = 0xA1
+	JoystickX  = 0xA0, 
+	JoystickY  = 0xA1,
+	FreeMemory = 0xAF
 }
 
 public enum DigitalInputValues {
@@ -169,6 +170,8 @@ public class ControlPlane : MonoBehaviour {
 	public const byte CommandLedOnFor   = 3;
 	public const byte CommandLedBlink   = 4;
 	public const byte CommandSetAlpha   = 5;
+	public const byte CommandGetInput   = 6;
+	public const byte CommandGetAnalog  = 7;
 
 	public const byte EventStart1       = 0x7F;
 	public const byte EventStart2       = 0x28;
@@ -300,7 +303,6 @@ public class ControlPlane : MonoBehaviour {
 
 	[HideInInspector]
 	public Dictionary<AnalogInputValues, AnalogInput> AnalogInputs = new Dictionary<AnalogInputValues, AnalogInput>();
-	
 
 	[Tooltip("SerialPort of your device.")]
 	public string portName = "/dev/tty.SLAB_USBtoUART";
@@ -318,6 +320,17 @@ public class ControlPlane : MonoBehaviour {
 	public void SendCommand(Command cmd) {
 		myDevice.send(cmd.getBytes());
 	}
+
+	public void RequestInputValue(byte index) {
+		Command cmd = new Command(CommandGetInput, index);
+		SendCommand(cmd);
+	}
+
+	public void RequestAnalogValue(byte index) {
+		Command cmd = new Command(CommandGetAnalog, index);
+		SendCommand(cmd);
+	}
+
 	void Awake() {
 		for(int i = 0; i < LedCount; i++) {
 			Led led = new Led(this, (byte) i);
@@ -341,20 +354,22 @@ public class ControlPlane : MonoBehaviour {
 	}
 
 	void Start() {
-
 		myDevice.set(portName, baudRate, ReadTimeout, QueueLength); // This method set the communication with the following vars;
 		myDevice.connect(); // This method open the Serial communication with the vars previously given.
+
+		StartCoroutine(LoadAllInputValues());
 	}
 
 	void Update() {
 		byte[] bytes = myDevice.readQueue();
 		if(bytes != null && bytes.Length > 0) {
-			Enqueue(bytes);
+			foreach(byte b in bytes) {
+				incoming.Enqueue(b);
+			}
 		}
 
 		Event evt = ProcessQueue();
 		if(evt != null) {
-
 			if(evt.Type == EventTypes.AnalogValue) {
 				AnalogEvent analog = evt as AnalogEvent;
 
@@ -363,8 +378,7 @@ public class ControlPlane : MonoBehaviour {
 				if(AnalogInputEvent != null)
 					AnalogInputEvent.Invoke(this, new AnalogInputChangedArgs(analog));
 			}
-
-			if(evt.Type == EventTypes.InputChanged) {
+			else if(evt.Type == EventTypes.InputChanged) {
 				InputEvent input = evt as InputEvent;
 				Debug.Log("Digital: " + input.DigitalInput.ToString() + " " + input.State);
 
@@ -373,16 +387,19 @@ public class ControlPlane : MonoBehaviour {
 				if(DigitalInputEvent != null)
 					DigitalInputEvent.Invoke(this, new DigitalInputChangedArgs(input));
 			}
-
-
-			
 		}
 	}
 
-	void Enqueue(byte[] bytes) {
-		foreach(byte b in bytes) {
-			incoming.Enqueue(b);
+	IEnumerator LoadAllInputValues() {
+		yield return new WaitForSeconds(0.25f);
+
+		IEnumerable<DigitalInputValues> digitalValues = Enum.GetValues(typeof(DigitalInputValues)).Cast<DigitalInputValues>();
+		foreach(DigitalInputValues val in digitalValues) {
+			RequestInputValue((byte) val);
+			yield return new WaitForSeconds(0.1f);
 		}
+
+		Debug.Log("Requested state of all inputs.");
 	}
 	
 	Event ProcessQueue() {
